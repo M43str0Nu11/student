@@ -19,7 +19,6 @@ func main() {
 
 	connStr := "postgres://orders_user:StrongP@ssw0rd@localhost:5432/orders_db?sslmode=disable"
 
-	// Подключаем БД
 	pg, err := db.New(connStr)
 	if err != nil {
 		log.Fatalf("Ошибка подключения к Postgres: %v", err)
@@ -33,10 +32,7 @@ func main() {
 		log.Fatalf("Ошибка инициализации схемы: %v", err)
 	}
 
-	// Кэш
 	c := cache.New()
-
-	// Загружаем все данные из БД в кэш при старте
 	data, err := pg.LoadAll(ctx)
 	if err == nil {
 		c.LoadAll(data)
@@ -45,16 +41,24 @@ func main() {
 		fmt.Println("⚠️ Не удалось загрузить данные из БД:", err)
 	}
 
-	// HTTP API
 	h := api.NewHandler(c)
-
-	// Запускаем (позже добавим NATS подписчика)
 	go nats.StartSubscriber(pg, c)
 
 	port := "8080"
 	if p := os.Getenv("PORT"); p != "" {
 		port = p
 	}
+
+	// --- Создаём отдельный mux для фронта ---
+	mux := http.NewServeMux()
+
+	// API отдаём через основной роутер
+	mux.Handle("/orders/", h.Router())
+
+	// Фронт отдаём статикой
+	fs := http.FileServer(http.Dir("./web"))
+	mux.Handle("/", fs) // только "/" и всё, что не /orders/*
+
 	fmt.Printf("🌐 HTTP server started on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, h.Router()))
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }

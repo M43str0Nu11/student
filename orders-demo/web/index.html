@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+        input, button { padding: 8px; margin: 5px 0; }
+        h2 { margin-bottom: 10px; }
+        .order-container { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 800px; }
+        .section { margin-bottom: 15px; }
+        .section h3 { margin-bottom: 5px; color: #333; }
+        .item { padding: 8px; border-bottom: 1px solid #eee; }
+        .item:last-child { border-bottom: none; }
+        .label { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Проверка заказа</h2>
+    <input type="text" id="orderId" placeholder="Введите Order UID">
+    <button onclick="checkOrder()">Проверить</button>
+
+    <div class="order-container" id="result">
+        Здесь будут данные заказа
+    </div>
+
+    <script>
+        async function checkOrder() {
+            const orderId = document.getElementById("orderId").value.trim();
+            const container = document.getElementById("result");
+            container.innerHTML = "Загрузка...";
+
+            if (!orderId) {
+                alert("Введите Order UID");
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8080/orders/${orderId}`);
+                if (!response.ok) {
+                    container.innerHTML = "<b>Заказ не найден</b>";
+                    return;
+                }
+                const data = await response.json();
+                const order = data.order;
+
+                container.innerHTML = `
+                    <div class="section">
+                        <h3>Основное</h3>
+                        <p><span class="label">Order UID:</span> ${order.order_uid}</p>
+                        <p><span class="label">Track number:</span> ${order.track_number}</p>
+                        <p><span class="label">Дата создания:</span> ${order.date_created}</p>
+                        <p><span class="label">Customer ID:</span> ${order.customer_id}</p>
+                    </div>
+                    <div class="section">
+                        <h3>Адрес доставки</h3>
+                        <p><span class="label">Имя:</span> ${order.delivery.name}</p>
+                        <p><span class="label">Телефон:</span> ${order.delivery.phone}</p>
+                        <p><span class="label">Email:</span> ${order.delivery.email}</p>
+                        <p><span class="label">Адрес:</span> ${order.delivery.address}, ${order.delivery.city}, ${order.delivery.region}, ${order.delivery.zip}</p>
+                    </div>
+                    <div class="section">
+                        <h3>Платеж</h3>
+                        <p><span class="label">Сумма:</span> ${order.payment.amount} ${order.payment.currency}</p>
+                        <p><span class="label">Delivery cost:</span> ${order.payment.delivery_cost}</p>
+                        <p><span class="label">Goods total:</span> ${order.payment.goods_total}</p>
+                        <p><span class="label">Bank:</span> ${order.payment.bank}</p>
+                    </div>
+                    <div class="section">
+                        <h3>Товары</h3>
+                        ${order.items.map(item => `
+                            <div class="item">
+                                <p><span class="label">Название:</span> ${item.name}</p>
+                                <p><span class="label">Бренд:</span> ${item.brand}</p>
+                                <p><span class="label">Цена:</span> ${item.price}</p>
+                                <p><span class="label">Количество:</span> ${item.total_price}</p>
+                                <p><span class="label">Размер:</span> ${item.size}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (err) {
+                container.innerHTML = "<b>Ошибка подключения к сервису</b>";
+            }
+        }
+    </script>
+</body>
+</html>
