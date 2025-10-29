@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+postgres:
+  host: localhost
+  port: 5432
+  user: orders_user
+  password: StrongP@ssw0rd
+  dbname: orders_db
+
+nats:
+  cluster_id: test-cluster
+  client_id: order-service
+  channel: orders
